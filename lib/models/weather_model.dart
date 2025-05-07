@@ -1,21 +1,3 @@
-// weather_model.dart
-// class Weather {
-//   final String weather_desc;
-//   final double local_datetime;
-
-//   Weather({
-//     required this.weather_desc,
-//     required this.local_datetime,
-//   });
-
-//   factory Weather.fromJson(Map<String, dynamic> json) {
-//     return Weather(
-//       weather_desc: json['weather_desc'] ?? 'Tidak diketahui',
-//       local_datetime: json['local_datetime'] ?? '',
-//     );
-//   }
-// }
-
 class Weather {
   final String description;
   final String icon;

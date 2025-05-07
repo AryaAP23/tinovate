@@ -38,6 +38,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.8.4
 
 dev_dependencies:
   flutter_test:
@@ -62,9 +63,12 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - assets\images\icon_soil_unused.png
+    - assets\images\icon_soil_used.png
+    - assets\images\profil.png
+    
     # - lib/models/weather_model.dart/
-  #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -81,6 +85,16 @@ flutter:
     - family: Poppins
       fonts:
         - asset: assets/fonts/Poppins-Regular.ttf
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Regular.ttf
+    - family: Outfit-bold
+      fonts:
+        - asset: assets\fonts\Outfit-Bold.ttf
+    - family: Outfit-black
+      fonts:
+        - asset: assets\fonts\Outfit-Black.ttf
+
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro
