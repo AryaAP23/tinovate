@@ -6,12 +6,13 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/mqtt_service.dart';
 // import 'package:intl/date_symbol_data_local.dart';
 
 class DashboardView extends StatefulWidget {
   DashboardView({super.key});
-  final String datetime =
-      DateFormat('EEEE, d MMMM y', 'id_ID').format(DateTime.now());
+  // final String datetime =
+  //     DateFormat('EEEE, d MMMM y', 'id_ID').format(DateTime.now());
 
   @override
   State<DashboardView> createState() => _DashboardViewState();
@@ -30,6 +31,9 @@ class _DashboardViewState extends State<DashboardView> {
   final DateTime now = DateTime.now();
   final String datetime =
       DateFormat('EEEE, d MMMM y', 'id_ID').format(DateTime.now());
+  late final user = supabase.auth.currentUser;
+  String? name;
+  String? fotoProfileUrl;
 
   Future<void> fetchIrrigationStatus() async {
     // final supabase = Supabase.instance.client;
@@ -42,8 +46,10 @@ class _DashboardViewState extends State<DashboardView> {
         .limit(1)
         .maybeSingle();
 
-    final autoData =
-        await supabase.from('button_auto').select('status').maybeSingle();
+    final autoData = await supabase
+        .from('penyiraman_otomatis')
+        .select('status')
+        .maybeSingle();
 
     setState(() {
       isManualIrrigationOn = manualData?['status'];
@@ -68,8 +74,16 @@ class _DashboardViewState extends State<DashboardView> {
     });
   }
 
+  Future<void> refreshData() async {
+    await Future.delayed(Duration(seconds: 2)); // Simulasi fetch data
+    setState(() {
+      fetchDataKelembapan();
+      fetchIrrigationStatus();
+    });
+  }
+
   Future<void> toggleManualIrrigation() async {
-    final supabase = Supabase.instance.client;
+    // final supabase = Supabase.instance.client;
 
     if (isManualIrrigationOn == null) {
       print('Status manual irrigation belum diinisialisasi.');
@@ -79,13 +93,13 @@ class _DashboardViewState extends State<DashboardView> {
     try {
       if (isAutoIrrigationOn != null) {
         final latestButton = await supabase
-            .from('button_auto')
+            .from('penyiraman_otomatis')
             .select('status_id')
             .order('status_id', ascending: false)
             .limit(1)
             .single();
 
-        await supabase.from('button_auto').update({
+        await supabase.from('penyiraman_otomatis').update({
           'status': false,
         }).eq('status_id', latestButton['status_id']);
       }
@@ -97,16 +111,15 @@ class _DashboardViewState extends State<DashboardView> {
           .limit(1)
           .single();
 
-      // print('Latest humidity data: $latestHumidity');
-      // print('Status lama: ${latestHumidity['status']}');
-      // print('status baru:');
-      // print(newStatus);
-      // print('ID data: ${latestHumidity['id']}');
       await supabase.from('data_kelembapan_tanah').update({
         'status': newStatus,
       }).eq('id', latestHumidity['id']);
-      print('Status berhasil diperbarui.');
+      // print('Status berhasil diperbarui.');
 
+      MQTTService().publishToMQTT(
+        topic: 'tinovate/getStatusSiram',
+        message: '{"status": $newStatus}',
+      );
       await fetchIrrigationStatus();
     } catch (e) {
       print('Terjadi error saat update: $e');
@@ -125,6 +138,7 @@ class _DashboardViewState extends State<DashboardView> {
     fetchIrrigationStatus();
     fetchDataKelembapan();
     getWeather();
+    // fetchProfile();
   }
 
   void getWeather() async {
@@ -195,272 +209,284 @@ class _DashboardViewState extends State<DashboardView> {
                   ],
                 ),
 
-                // Kanan: Foto Profil
                 CircleAvatar(
-                  radius: 24,
-                  backgroundImage: AssetImage(
-                      'assets/images/profil.png'), // ganti path sesuai foto kamu
+                  radius: 30,
+                  backgroundColor: const Color(0xffCFEBC1),
+                  backgroundImage: const AssetImage('assets/images/Logo.png'),
                 ),
               ],
             ),
           ),
         ),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // SizedBox(height: 10),
-                  Text(
-                    'Kelembapan Tanah',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+      body: RefreshIndicator(
+        onRefresh: refreshData,
+        child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // SizedBox(height: 10),
+                    Text(
+                      'Kelembapan Tanah',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    height: 230,
-                    child: LineChart(
-                      LineChartData(
-                        gridData: FlGridData(show: true),
-                        titlesData: FlTitlesData(
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                final index = value.toInt();
-                                if (index < latestSoilMoistureData.length) {
-                                  final rawTime =
-                                      latestSoilMoistureData[index]['time'];
-                                  final parsedTime = DateFormat.Hms()
-                                      .parse(rawTime); // parsing dari HH:mm:ss
-                                  final label = DateFormat.Hm()
-                                      .format(parsedTime); // format jadi HH:mm
-                                  return Text(label,
-                                      style: TextStyle(fontSize: 10));
-                                }
-                                return Text('');
-                              },
-                              interval: 1,
+                    SizedBox(
+                      height: 10,
+                    ),
+                    SizedBox(
+                      height: 230,
+                      child: LineChart(
+                        LineChartData(
+                          gridData: FlGridData(show: true),
+                          titlesData: FlTitlesData(
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (value, meta) {
+                                    final index = value.toInt();
+                                    if (index < latestSoilMoistureData.length) {
+                                      final rawTime =
+                                          latestSoilMoistureData[index]['time'];
+                                      final parsedTime = DateFormat.Hms().parse(
+                                          rawTime); // parsing dari HH:mm:ss
+                                      final label = DateFormat.Hm().format(
+                                          parsedTime); // format jadi HH:mm
+                                      return Text(label,
+                                          style: TextStyle(fontSize: 10));
+                                    }
+                                    return Text('');
+                                  },
+                                  interval: 1,
+                                ),
+                              ),
+                              topTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false))),
+                          borderData: FlBorderData(show: true),
+                          lineBarsData: [
+                            LineChartBarData(
+                              isCurved: true,
+                              color: Colors.green,
+                              barWidth: 2,
+                              dotData: FlDotData(show: true),
+                              belowBarData: BarAreaData(show: false),
+                              spots: List.generate(
+                                latestSoilMoistureData.length,
+                                (index) {
+                                  final kelembapan =
+                                      latestSoilMoistureData[index]
+                                              ['humidity'] ??
+                                          0;
+                                  return FlSpot(
+                                      index.toDouble(), kelembapan.toDouble());
+                                },
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                        borderData: FlBorderData(show: true),
-                        lineBarsData: [
-                          LineChartBarData(
-                            isCurved: true,
-                            color: Colors.green,
-                            barWidth: 2,
-                            dotData: FlDotData(show: true),
-                            belowBarData: BarAreaData(show: false),
-                            spots: List.generate(
-                              latestSoilMoistureData.length,
-                              (index) {
-                                final kelembapan = latestSoilMoistureData[index]
-                                        ['humidity'] ??
-                                    0;
-                                return FlSpot(
-                                    index.toDouble(), kelembapan.toDouble());
+                      ),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Card(
+                      color: Color(0xffCFEBC1),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(0, 2.0, 16.0,
+                            16.0), // kiri = 0, atas = 16, kanan = 16, bawah = 16
+                        child: Column(
+                          children: [
+                            //Tabel pertama
+                            Table(
+                              // border: TableBorder.all(),
+                              columnWidths: {
+                                0: FixedColumnWidth(180.0),
+                                1: FixedColumnWidth(80.0),
                               },
+                              children: [
+                                TableRow(children: [
+                                  Padding(
+                                    padding:
+                                        EdgeInsets.only(left: 1.0, top: 10),
+                                    child: Text(
+                                      datetime,
+                                      style: TextStyle(
+                                          fontSize: 15,
+                                          fontFamily: 'Outfit',
+                                          color: Color(0xff4A6B3E)),
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  )
+                                ])
+                              ],
                             ),
-                          ),
-                        ],
+
+                            //Tabel kedua
+                            Table(
+                              // border: TableBorder.all(),
+                              columnWidths: {
+                                0: FixedColumnWidth(140.0),
+                                1: FixedColumnWidth(80.0),
+                              },
+                              children: [
+                                TableRow(children: [
+                                  Padding(
+                                    padding:
+                                        EdgeInsets.only(left: 10, top: 5.0),
+                                    child: Text(
+                                      currentWeather?.temperature != null
+                                          ? '${currentWeather!.temperature.toStringAsFixed(1)} °'
+                                          : '-',
+                                      style: TextStyle(
+                                          fontSize: 45,
+                                          fontFamily: 'Outfit-bold',
+                                          color: Color(0xff4A6B3E)),
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.only(left: 0.0),
+                                    child: currentWeather?.icon != null
+                                        ? SvgPicture.network(
+                                            currentWeather!.icon,
+                                            width: 60,
+                                            height: 60,
+                                            placeholderBuilder: (context) =>
+                                                CircularProgressIndicator(), // opsional
+                                          )
+                                        : Text(
+                                            'No icon',
+                                            style: TextStyle(
+                                                fontFamily: 'Outfit',
+                                                color: Color(0xff4A6B3E)),
+                                          ), // fallback jika null
+                                  ),
+                                ]),
+                              ],
+                            ),
+
+                            // Tabel ketiga
+                            Table(
+                              // border: TableBorder.all(),
+                              columnWidths: {
+                                0: FixedColumnWidth(200.0),
+                                1: FixedColumnWidth(150.0),
+                              },
+                              children: [
+                                TableRow(children: [
+                                  Padding(
+                                    padding: EdgeInsets.only(left: 18.0),
+                                    child: Text(
+                                      currentWeather?.description ??
+                                          'Gagal memuat data cuaca',
+                                      style: TextStyle(
+                                          fontSize: 15,
+                                          fontFamily: 'Outfit',
+                                          color: Color(0xff4A6B3E)),
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  )
+                                ]),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Card(
-                    color: Color(0xffCFEBC1),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(0, 2.0, 16.0,
-                          16.0), // kiri = 0, atas = 16, kanan = 16, bawah = 16
-                      child: Column(
-                        children: [
-                          //Tabel pertama
-                          Table(
-                            // border: TableBorder.all(),
-                            columnWidths: {
-                              0: FixedColumnWidth(180.0),
-                              1: FixedColumnWidth(80.0),
-                            },
-                            children: [
-                              TableRow(children: [
-                                Padding(
-                                  padding: EdgeInsets.only(left: 1.0, top: 10),
-                                  child: Text(
-                                    datetime,
-                                    style: TextStyle(
-                                        fontSize: 15,
-                                        fontFamily: 'Outfit',
-                                        color: Color(0xff4A6B3E)),
-                                    textAlign: TextAlign.left,
-                                  ),
-                                )
-                              ])
-                            ],
-                          ),
-
-                          //Tabel kedua
-                          Table(
-                            // border: TableBorder.all(),
-                            columnWidths: {
-                              0: FixedColumnWidth(140.0),
-                              1: FixedColumnWidth(80.0),
-                            },
-                            children: [
-                              TableRow(children: [
-                                Padding(
-                                  padding: EdgeInsets.only(left: 10, top: 5.0),
-                                  child: Text(
-                                    currentWeather?.temperature != null
-                                        ? '${currentWeather!.temperature.toStringAsFixed(1)} °'
-                                        : '-',
-                                    style: TextStyle(
-                                        fontSize: 45,
-                                        fontFamily: 'Outfit-bold',
-                                        color: Color(0xff4A6B3E)),
-                                    textAlign: TextAlign.left,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.only(left: 0.0),
-                                  child: currentWeather?.icon != null
-                                      ? SvgPicture.network(
-                                          currentWeather!.icon,
-                                          width: 60,
-                                          height: 60,
-                                          placeholderBuilder: (context) =>
-                                              CircularProgressIndicator(), // opsional
-                                        )
-                                      : Text(
-                                          'No icon',
-                                          style: TextStyle(
-                                              fontFamily: 'Outfit',
-                                              color: Color(0xff4A6B3E)),
-                                        ), // fallback jika null
-                                ),
-                              ]),
-                            ],
-                          ),
-
-                          // Tabel ketiga
-                          Table(
-                            // border: TableBorder.all(),
-                            columnWidths: {
-                              0: FixedColumnWidth(200.0),
-                              1: FixedColumnWidth(150.0),
-                            },
-                            children: [
-                              TableRow(children: [
-                                Padding(
-                                  padding: EdgeInsets.only(left: 18.0),
-                                  child: Text(
-                                    currentWeather?.description ?? '-',
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontFamily: 'Outfit',
-                                        color: Color(0xff4A6B3E)),
-                                    textAlign: TextAlign.left,
-                                  ),
-                                )
-                              ]),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 40),
-                  Card(
-                    color: Color(0xffCFEBC1),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Status Penyiraman:',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xff4A6B3E),
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            isManualIrrigationOn == null
-                                ? 'Memuat...'
-                                : isManualIrrigationOn!
-                                    ? 'Aktif'
-                                    : 'Tidak Aktif',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Penyiraman Otomatis:',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xff4A6B3E),
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            isAutoIrrigationOn == null
-                                ? 'Memuat...'
-                                : isAutoIrrigationOn!
-                                    ? 'Aktif'
-                                    : 'Tidak Aktif',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          SizedBox(height: 16),
-                          Center(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: (isManualIrrigationOn ?? false)
-                                    ? Colors.green
-                                    : Colors.red,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 32, vertical: 12),
+                    SizedBox(height: 40),
+                    Card(
+                      color: Color(0xffCFEBC1),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Status Penyiraman:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff4A6B3E),
                               ),
-                              onPressed: toggleManualIrrigation,
-                              child: Text(
-                                (isManualIrrigationOn ?? false)
-                                    ? 'Matikan Penyiraman'
-                                    : 'Hidupkan Penyiraman',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              isManualIrrigationOn == null
+                                  ? 'Memuat...'
+                                  : isManualIrrigationOn!
+                                      ? 'Aktif'
+                                      : 'Tidak Aktif',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Penyiraman Otomatis:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xff4A6B3E),
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              isAutoIrrigationOn == null
+                                  ? 'Memuat...'
+                                  : isAutoIrrigationOn!
+                                      ? 'Aktif'
+                                      : 'Tidak Aktif',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            Center(
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      (isManualIrrigationOn ?? false)
+                                          ? Colors.red
+                                          : Colors.green,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 32, vertical: 12),
+                                ),
+                                onPressed: toggleManualIrrigation,
+                                child: Text(
+                                  'Siram',
+                                  // (isManualIrrigationOn ?? false)
+                                  //     ? 'Matikan Penyiraman'
+                                  //     : 'Hidupkan Penyiraman',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }

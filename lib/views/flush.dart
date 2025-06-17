@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import '../services/mqtt_service.dart';
 
 class FlushPage extends StatefulWidget {
   const FlushPage({Key? key}) : super(key: key);
@@ -35,9 +36,9 @@ class _FlushPageState extends State<FlushPage> {
         .limit(1)
         .maybeSingle();
 
-    // Ambil status auto dari tabel button_auto
+    // Ambil status auto dari tabel penyiraman_otomatis
     final autoResponse = await supabase
-        .from('button_auto')
+        .from('penyiraman_otomatis')
         .select('status')
         .eq('status_id', 1)
         .single();
@@ -49,30 +50,93 @@ class _FlushPageState extends State<FlushPage> {
   }
 
   Future<void> toggleManual(bool newValue) async {
-    final newValue = !isManualOn!;
+    final action = !isManualOn!;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Color(0xffCFEBC1),
+        title: Text(action
+            ? 'Aktifkan Penyiraman Manual'
+            : 'Nonaktifkan Penyiraman Manual'),
+        titleTextStyle: TextStyle(
+            fontFamily: 'Outfit', color: Color(0xff000000), fontSize: 20.0),
+        content: Text(
+          'Apakah kamu yakin ingin ${action ? 'menghidupkan' : 'mematikan'} penyiraman manual?',
+        ),
+        contentTextStyle:
+            TextStyle(fontFamily: 'Outfit', color: Color(0xff000000)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ya'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
     final latestHumidity = await supabase
         .from('data_kelembapan_tanah')
         .select('*')
         .order('id', ascending: false)
         .limit(1)
         .single();
-    print('latest humidity data: $latestHumidity');
-    print(newValue);
-    print('ID data: ${latestHumidity['id']}');
-    print(isManualOn);
+
     await supabase.from('data_kelembapan_tanah').update({
-      'status': newValue,
+      'status': action,
     }).eq('id', latestHumidity['id']);
-    print('Status berhasil diperbarui.');
+
+    MQTTService().publishToMQTT(
+      topic: 'tinovate/getStatusSiram',
+      message: '{"status": $action}',
+    );
+
     setState(() {
-      isManualOn = newValue;
+      isManualOn = action;
     });
   }
 
   Future<void> toggleAuto(bool newValue) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Color(0xffCFEBC1),
+        title: Text(newValue
+            ? 'Aktifkan Penyiraman Otomatis'
+            : 'Nonaktifkan Penyiraman Otomatis'),
+        titleTextStyle: TextStyle(
+            fontFamily: 'Outfit', color: Color(0xff000000), fontSize: 20.0),
+        content: Text(
+          'Apakah kamu yakin ingin ${newValue ? 'menghidupkan' : 'mematikan'} penyiraman otomatis?',
+        ),
+        contentTextStyle:
+            TextStyle(fontFamily: 'Outfit', color: Color(0xff000000)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ya'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
     await supabase
-        .from('button_auto')
+        .from('penyiraman_otomatis')
         .update({'status': newValue}).eq('status_id', 1);
+
+    MQTTService().publishToMQTT(
+      topic: 'tinovate/getStatusAuto',
+      message: '{"status": $newValue}',
+    );
 
     setState(() {
       isAutoOn = newValue;
@@ -183,6 +247,7 @@ class _FlushPageState extends State<FlushPage> {
           padding: const EdgeInsets.all(16.0),
           children: [
             Card(
+              color: Color(0xffCFEBC1),
               elevation: 4,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
@@ -259,6 +324,7 @@ class _FlushPageState extends State<FlushPage> {
                 itemBuilder: (context, index) {
                   final item = history[index];
                   return Card(
+                    color: Color(0xffCFEBC1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -270,7 +336,7 @@ class _FlushPageState extends State<FlushPage> {
                       ),
                       subtitle: Text(
                         'Durasi: ${item['duration'].inMinutes} menit',
-                        style: const TextStyle(color: Colors.grey),
+                        style: const TextStyle(color: Colors.blue),
                       ),
                       leading: const Icon(Icons.water_drop_outlined,
                           color: Colors.blue),

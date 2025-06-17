@@ -1,0 +1,2 @@
+C:/Kuliah Arya/Matkul Semester 4/PPL ADPL/tinovate_01/android/app/.cxx/Debug/3d485l5v/x86/CMakeFiles/edit_cache.dir
+C:/Kuliah Arya/Matkul Semester 4/PPL ADPL/tinovate_01/android/app/.cxx/Debug/3d485l5v/x86/CMakeFiles/rebuild_cache.dir

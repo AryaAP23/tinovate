@@ -39,6 +39,11 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.8.4
+  image_picker: ^1.0.4
+  path: ^1.8.3
+  mime: ^1.0.4
+  mqtt_client: ^10.8.0
+  provider: ^6.1.5
 
 dev_dependencies:
   flutter_test:
@@ -50,9 +55,25 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+# flutter_icons:
+#   android: true
+#   ios: true
+#   image_path: "assets/images/tinovate.png"
+flutter_native_splash:
+  color: "#ffffff" # atau background yang kamu mau
+  image: assets/images/tinovate.png
+  android: true
+  ios: true
+
+  # Perbesar tampilan gambar (utamanya di Android)
+  android_gravity: center
+  fullscreen: true
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -67,6 +88,8 @@ flutter:
     - assets\images\icon_soil_unused.png
     - assets\images\icon_soil_used.png
     - assets\images\profil.png
+    - assets\images\Logo.png
+    - assets\images\tinovate.png
     
     # - lib/models/weather_model.dart/
 

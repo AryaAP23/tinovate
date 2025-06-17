@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/mqtt_service.dart';
+// import 'dart:convert';
 
 class SoilMoisturePage extends StatefulWidget {
   const SoilMoisturePage({super.key});
@@ -10,6 +12,7 @@ class SoilMoisturePage extends StatefulWidget {
 
 class _SoilMoisturePageState extends State<SoilMoisturePage> {
   final supabase = Supabase.instance.client;
+  final mqttService = MQTTService();
   List<dynamic> moistureHistory = [];
   int? minValue;
   int? maxValue;
@@ -33,9 +36,13 @@ class _SoilMoisturePageState extends State<SoilMoisturePage> {
         .order('date', ascending: false)
         .order('time', ascending: false);
 
+    final result = await supabase.from('parameter_kelembapan').select('*');
+    print(history);
+    print(result);
+
     final config = await supabase
         .from('parameter_kelembapan')
-        .select()
+        .select('*')
         .eq('parameter_id', 1)
         .single();
 
@@ -90,6 +97,18 @@ class _SoilMoisturePageState extends State<SoilMoisturePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Batas kelembapan diperbarui!')),
       );
+      MQTTService().publishToMQTT(
+        topic: 'tinovate/getLimit',
+        message: '{"upper_limit": $max, "lower_limit": $min}',
+      );
+      // mqttService.publishToMQTT(
+      //   topic: 'tinovate/getLimit',
+      //   message: jsonEncode({
+      //     'upper_limit': max,
+      //     'lower_limit': min,
+      //   }),
+      // );
+
       fetchData();
     }
   }
@@ -169,9 +188,9 @@ class _SoilMoisturePageState extends State<SoilMoisturePage> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
           ),
           SizedBox(height: 20),
-          Text("Riwayat Kelembapan Tanah",
+          Text("Riwayat Pencatatan Kelembapan Tanah",
               style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontFamily: 'Outfit',
                   fontWeight: FontWeight.bold)),
           SizedBox(height: 10),

@@ -2,10 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'views/dashboard.dart';
+import 'views/Login.dart';
 import 'views/flush.dart';
 import 'views/profile.dart';
 import 'views/soilmoisture.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tinovate/views/updateuser.dart';
+import 'services/mqtt_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +19,7 @@ void main() async {
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmcGtxb3ppbHNqbmdla3NvaHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5MjY5NzYsImV4cCI6MjA2MTUwMjk3Nn0.vb8nAkfsLmbfT2yrJl6uwgayKv7nP_ZNH9w5rlivjXY',
   );
+  await MQTTService().connect();
 
   runApp(const MyApp());
 }
@@ -25,13 +29,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+    // final mqttService = MQTTService();
+    // mqttService.connect().then((_) {
+    //   print("✅ MQTT connected.");
+    // }).catchError((e) {
+    //   print("❌ Gagal connect MQTT: $e");
+    // });
     return MaterialApp(
       title: 'Smart Farm App',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const MainPage(),
+      initialRoute: session != null ? '/home' : '/login',
+      routes: {
+        '/login': (context) => Login(), // hanya login
+        '/home': (context) => MainPage(), // dashboard utama
+        '/updateuser': (context) => const UpdateUser(),
+      },
     );
   }
 }
