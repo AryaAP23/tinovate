@@ -26,79 +26,6 @@ class _FlushPageState extends State<FlushPage> {
     fetchHistory();
   }
 
-  // Future<void> fetchCurrentStatus() async {
-  //   // Ambil status manual dari tabel data_kelembapan_tanah
-  //   final manualResponse = await supabase
-  //       .from('data_kelembapan_tanah')
-  //       .select('status')
-  //       .order('date', ascending: false)
-  //       .order('time', ascending: false)
-  //       .limit(1)
-  //       .maybeSingle();
-
-  //   // Ambil status auto dari tabel penyiraman_otomatis
-  //   final autoResponse = await supabase
-  //       .from('penyiraman_otomatis')
-  //       .select('status')
-  //       .eq('status_id', 1)
-  //       .single();
-
-  //   setState(() {
-  //     isManualOn = manualResponse?['status'];
-  //     isAutoOn = autoResponse['status'];
-  //   });
-  // }
-
-  // Future<void> toggleManual(bool newValue) async {
-  //   final action = !(isManualOn ?? false);
-  //   final confirm = await showDialog<bool>(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       backgroundColor: Color(0xffCFEBC1),
-  //       title: Text(action
-  //           ? 'Aktifkan Penyiraman Manual'
-  //           : 'Nonaktifkan Penyiraman Manual'),
-  //       titleTextStyle: TextStyle(
-  //           fontFamily: 'Outfit', color: Color(0xff000000), fontSize: 20.0),
-  //       content: Text(
-  //         'Apakah kamu yakin ingin ${action ? 'menghidupkan' : 'mematikan'} penyiraman manual?',
-  //       ),
-  //       contentTextStyle:
-  //           TextStyle(fontFamily: 'Outfit', color: Color(0xff000000)),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context, false),
-  //           child: const Text('Batal'),
-  //         ),
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context, true),
-  //           child: const Text('Ya'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-
-  //   if (confirm != true) return;
-  //   final latestHumidity = await supabase
-  //       .from('data_kelembapan_tanah')
-  //       .select('*')
-  //       .order('id', ascending: false)
-  //       .limit(1)
-  //       .single();
-
-  //   await supabase.from('data_kelembapan_tanah').update({
-  //     'status': action,
-  //   }).eq('id', latestHumidity['id']);
-
-  //   MQTTService().publishToMQTT(
-  //     topic: 'tinovate/getStatusSiram',
-  //     message: '{"status": $action}',
-  //   );
-
-  //   setState(() {
-  //     isManualOn = action;
-  //   });
-  // }
   Future<void> toggleManual(bool newValue) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -144,8 +71,6 @@ class _FlushPageState extends State<FlushPage> {
       topic: 'tinovate/getStatusSiram',
       message: '{"status": $newValue}',
     );
-
-    // ❌ Hapus setState manual, karena StreamBuilder akan update otomatis
   }
 
   Future<void> toggleAuto(bool newValue) async {
@@ -203,7 +128,7 @@ class _FlushPageState extends State<FlushPage> {
       setState(() {
         selectedDate = picked;
       });
-      await fetchHistory(); // refresh data berdasarkan tanggal
+      await fetchHistory();
     }
   }
 
@@ -224,12 +149,6 @@ class _FlushPageState extends State<FlushPage> {
           .order('date', ascending: true)
           .order('time', ascending: true);
     }
-
-    // final data = await supabase
-    //     .from('data_kelembapan_tanah')
-    //     .select()
-    //     .order('date', ascending: true)
-    //     .order('time', ascending: true);
 
     List<Map<String, dynamic>> logs = List<Map<String, dynamic>>.from(data);
 
@@ -270,7 +189,6 @@ class _FlushPageState extends State<FlushPage> {
 
   @override
   Widget build(BuildContext context) {
-    // final theme = Theme.of(context);
     final formatter = DateFormat('dd MMM yyyy – HH:mm:ss');
 
     return Scaffold(
@@ -288,7 +206,6 @@ class _FlushPageState extends State<FlushPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // await fetchCurrentStatus();
           await fetchHistory();
         },
         child: ListView(
@@ -309,31 +226,6 @@ class _FlushPageState extends State<FlushPage> {
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    //   children: [
-                    //     Text('Penyiraman Manual',
-                    //         style: theme.textTheme.bodyLarge),
-                    //     Switch(
-                    //       value: isManualOn ?? false,
-                    //       onChanged: toggleManual,
-                    //       activeColor: Colors.green,
-                    //     ),
-                    //   ],
-                    // ),
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    //   children: [
-                    //     Text('Penyiraman Otomatis',
-                    //         style: theme.textTheme.bodyLarge),
-                    //     Switch(
-                    //       value: isAutoOn ?? false,
-                    //       onChanged: toggleAuto,
-                    //       activeColor: Colors.blue,
-                    //     ),
-                    //   ],
-                    // ),
-                    // 🔴 Stream untuk Manual Status
                     StreamBuilder<List<Map<String, dynamic>>>(
                       stream: Stream.periodic(Duration(seconds: 2))
                           .asyncMap((_) async {
@@ -356,7 +248,10 @@ class _FlushPageState extends State<FlushPage> {
                             data.isNotEmpty ? data[0]['status'] as bool : false;
 
                         return SwitchListTile(
-                          title: Text('Manual Mode'),
+                          title: Text(
+                            'Penyiraman Manual',
+                            style: TextStyle(fontFamily: 'Outfit'),
+                          ),
                           value: currentStatus,
                           onChanged: (newValue) {
                             toggleManual(newValue);
@@ -378,11 +273,13 @@ class _FlushPageState extends State<FlushPage> {
                             data.isNotEmpty ? data[0]['status'] as bool : false;
 
                         return SwitchListTile(
-                          title: Text('Auto Mode'),
+                          title: Text('Penyiraman Otomatis',
+                              style: TextStyle(fontFamily: 'Outfit')),
                           value: currentStatus,
                           onChanged: (value) {
                             toggleAuto(value);
                           },
+                          activeColor: Colors.blue,
                         );
                       },
                     ),

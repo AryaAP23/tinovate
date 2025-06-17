@@ -30,12 +30,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = Supabase.instance.client.auth.currentSession;
-    // final mqttService = MQTTService();
-    // mqttService.connect().then((_) {
-    //   print("✅ MQTT connected.");
-    // }).catchError((e) {
-    //   print("❌ Gagal connect MQTT: $e");
-    // });
     return MaterialApp(
       title: 'Smart Farm App',
       debugShowCheckedModeBanner: false,
@@ -45,8 +39,8 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: session != null ? '/home' : '/login',
       routes: {
-        '/login': (context) => Login(), // hanya login
-        '/home': (context) => MainPage(), // dashboard utama
+        '/login': (context) => Login(),
+        '/home': (context) => MainPage(),
         '/updateuser': (context) => const UpdateUser(),
       },
     );
@@ -62,11 +56,6 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
-
-  // final _future =
-  //     Supabase.instance.client.from('data_kelembapan_tanah').select();
-
-  // Daftar halaman
   final List<Widget> _pages = [
     DashboardView(),
     SoilMoisturePage(),
@@ -80,7 +69,6 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  // Bottom Navigation Items
   final List<BottomNavigationBarItem> _navItems = const [
     BottomNavigationBarItem(
       icon: Icon(Icons.dashboard),

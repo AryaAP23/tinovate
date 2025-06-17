@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/mqtt_service.dart';
-// import 'dart:convert';
 
 class SoilMoisturePage extends StatefulWidget {
   const SoilMoisturePage({super.key});
@@ -25,7 +24,7 @@ class _SoilMoisturePageState extends State<SoilMoisturePage> {
   @override
   void initState() {
     super.initState();
-    selectedDate = DateTime.now(); // default hari ini
+    selectedDate = DateTime.now();
     fetchData();
   }
 
@@ -84,8 +83,6 @@ class _SoilMoisturePageState extends State<SoilMoisturePage> {
         })
         .eq('parameter_id', 1)
         .select();
-
-    // print("Hasil update: $result");
 
     if (result.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

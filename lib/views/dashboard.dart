@@ -50,10 +50,6 @@ class _DashboardViewState extends State<DashboardView> {
       isManualIrrigationOn = manualData?['status'];
       isAutoIrrigationOn = autoData?['status'];
     });
-    // print('status dalam database: $manualData');
-    // print('status penyiraman manual $isManualIrrigationOn');
-    // print('status dalam database auto_button: $autoData');
-    // print('Status Penyiraman Otomatis: $isAutoIrrigationOn');
   }
 
   Future<void> fetchDataKelembapan() async {
@@ -69,7 +65,7 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Future<void> refreshData() async {
-    await Future.delayed(Duration(seconds: 2)); // Simulasi fetch data
+    await Future.delayed(Duration(seconds: 2));
     setState(() {
       fetchDataKelembapan();
       fetchIrrigationStatus();
@@ -107,7 +103,6 @@ class _DashboardViewState extends State<DashboardView> {
       await supabase.from('data_kelembapan_tanah').update({
         'status': newStatus,
       }).eq('id', latestHumidity['id']);
-      // print('Status berhasil diperbarui.');
 
       MQTTService().publishToMQTT(
         topic: 'tinovate/getStatusSiram',
@@ -121,7 +116,7 @@ class _DashboardViewState extends State<DashboardView> {
 
   void toggleButton() {
     setState(() {
-      isOn = !isOn; // Toggle status
+      isOn = !isOn;
     });
   }
 
@@ -131,15 +126,12 @@ class _DashboardViewState extends State<DashboardView> {
     fetchIrrigationStatus();
     fetchDataKelembapan();
     getWeather();
-    // fetchProfile();
   }
 
   void getWeather() async {
     try {
-      // print("Memulai fetch cuaca...");
       final weatherService = WeatherService();
       final data = await weatherService.fetchWeather();
-      // print("Data diterima: $data");
 
       if (data.isNotEmpty) {
         final current = data[0];
@@ -156,7 +148,6 @@ class _DashboardViewState extends State<DashboardView> {
         });
       }
     } catch (e) {
-      // print("Terjadi error saat ambil data: $e");
       setState(() {
         weatherInfo = "Gagal mendapatkan data cuaca: $e";
         isLoading = false;
@@ -169,15 +160,14 @@ class _DashboardViewState extends State<DashboardView> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80), // tinggi appbar
+        preferredSize: Size.fromHeight(80),
         child: SafeArea(
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            color: Color(0xff4A6B3E), // warna latar belakang
+            color: Color(0xff4A6B3E),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Kiri: 2 Teks
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -201,7 +191,6 @@ class _DashboardViewState extends State<DashboardView> {
                     ),
                   ],
                 ),
-
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: const Color(0xffCFEBC1),
@@ -243,7 +232,6 @@ class _DashboardViewState extends State<DashboardView> {
                               child: CircularProgressIndicator());
                         }
 
-                        // final latestSoilMoistureData = snapshot.data!;
                         final data = snapshot.data!;
                         final latest = data.length > 15
                             ? data.sublist(data.length - 15)
@@ -316,8 +304,7 @@ class _DashboardViewState extends State<DashboardView> {
                     Card(
                       color: Color(0xffCFEBC1),
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(0, 2.0, 16.0,
-                            16.0), // kiri = 0, atas = 16, kanan = 16, bawah = 16
+                        padding: EdgeInsets.fromLTRB(0, 2.0, 16.0, 16.0),
                         child: Column(
                           children: [
                             //Tabel pertama
@@ -376,14 +363,14 @@ class _DashboardViewState extends State<DashboardView> {
                                             width: 60,
                                             height: 60,
                                             placeholderBuilder: (context) =>
-                                                CircularProgressIndicator(), // opsional
+                                                CircularProgressIndicator(),
                                           )
                                         : Text(
                                             'No icon',
                                             style: TextStyle(
                                                 fontFamily: 'Outfit',
                                                 color: Color(0xff4A6B3E)),
-                                          ), // fallback jika null
+                                          ),
                                   ),
                                 ]),
                               ],
@@ -485,9 +472,6 @@ class _DashboardViewState extends State<DashboardView> {
                                 onPressed: toggleManualIrrigation,
                                 child: Text(
                                   'Siram',
-                                  // (isManualIrrigationOn ?? false)
-                                  //     ? 'Matikan Penyiraman'
-                                  //     : 'Hidupkan Penyiraman',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.white,

@@ -58,7 +58,6 @@ class _UpdateUserState extends State<UpdateUser> {
           .from('akun')
           .update({'foto_profile': imageUrl}).eq('user_id', userId);
 
-      // Cek apakah masih mounted sebelum pakai context
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -112,12 +111,10 @@ class _UpdateUserState extends State<UpdateUser> {
     final userId = user.id;
 
     try {
-      // Update nama ke tabel akun
       await supabase
           .from('akun')
           .update({'name': _name.text}).eq('user_id', userId);
 
-      // Update email ke auth Supabase
       await supabase.auth.updateUser(
         UserAttributes(email: _email.text),
       );
@@ -158,7 +155,7 @@ class _UpdateUserState extends State<UpdateUser> {
                   ? FileImage(_imageFile!)
                   : (_currentImageUrl != null
                       ? NetworkImage(_currentImageUrl!)
-                      : null), // fallback: jika semua null, tampil CircleAvatar kosong
+                      : null),
               child: _imageFile == null && _currentImageUrl == null
                   ? const Icon(Icons.person, size: 60, color: Colors.white)
                   : null,
@@ -200,12 +197,12 @@ class _UpdateUserState extends State<UpdateUser> {
                         Text('Apakah kamu yakin ingin memperbarui profil?'),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.of(context).pop(), // batal
+                        onPressed: () => Navigator.of(context).pop(),
                         child: Text('Tidak'),
                       ),
                       TextButton(
                         onPressed: () async {
-                          Navigator.of(context).pop(); // tutup dialog
+                          Navigator.of(context).pop();
 
                           try {
                             await updateNamaDanEmail();

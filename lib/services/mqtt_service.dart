@@ -47,8 +47,6 @@ class MQTTService {
 
       print('Received from $topic: $pt');
 
-      // final supabaseService = Supabase;
-
       if (topic == 'tinovate/postHumidity') {
         insertHumidity(pt);
       } else if (topic == 'tinovate/postStatusSiram') {
@@ -75,10 +73,6 @@ class MQTTService {
     client.publishMessage(topic, MqttQos.atMostOnce, builder.payload!);
     print("✅ Published to $topic: $message");
   }
-
-  // void disconnect() {
-  //   client.disconnect();
-  // }
 
   //======== GET DATA FROM DATABASE =========
   Future<Map<String, dynamic>> getLastData() async {
@@ -130,11 +124,6 @@ class MQTTService {
       final now = DateTime.now();
       final date = now.toIso8601String().split('T')[0];
       final time = now.toIso8601String().split('T')[1].split('.')[0];
-      // print('nilai terakhir:');
-      // print(lastData['humidity']);
-      // print(value);
-      // print('setelah conver:');
-      // print(humidity);
       final response = await supabase.from('data_kelembapan_tanah').insert({
         'date': date,
         'time': time,
@@ -151,16 +140,10 @@ class MQTTService {
 
   Future<void> updateStatus(String value) async {
     try {
-      final lastData = await getLastData(); // ambil baris terakhir
+      final lastData = await getLastData();
       final lastId = lastData['id'];
       final decoded = jsonDecode(value);
       final newStatus = decoded['status'];
-      // print('nilai dari mqtt:');
-      // print(value);
-      // print('new status;');
-      // print(newStatus);
-      // print('id:');
-      // print(lastId);
       final response = await supabase
           .from('data_kelembapan_tanah')
           .update({'status': newStatus}).eq('id', lastId);

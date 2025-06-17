@@ -19,7 +19,6 @@ class Weather {
       icon: json['image'] ?? '',
       temperature: (json['t'] as num).toDouble(),
       time: json['local_datetime'] ?? '',
-      // humidity: json['hu'] ?? 0,
     );
   }
 }
