@@ -326,3 +326,86 @@
 //     );
 //   }
 // }
+
+// import 'package:flutter/material.dart';
+// import 'package:intl/intl.dart';
+// import 'package:fl_chart/fl_chart.dart';
+// import 'package:supabase_flutter/supabase_flutter.dart';
+
+// class RealtimeChartWidget extends StatelessWidget {
+//   const RealtimeChartWidget({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return StreamBuilder<List<Map<String, dynamic>>>(
+//       stream: Supabase.instance.client
+//           .from('data_kelembapan_tanah')
+//           .stream(primaryKey: ['id'])
+//           .order('id', ascending: true),
+//       builder: (context, snapshot) {
+//         if (!snapshot.hasData) {
+//           return const Center(child: CircularProgressIndicator());
+//         }
+
+//         final allData = snapshot.data!;
+//         final latestData = allData.length > 10
+//             ? allData.sublist(allData.length - 10)
+//             : allData;
+
+//         return SizedBox(
+//           height: 230,
+//           child: LineChart(
+//             LineChartData(
+//               gridData: FlGridData(show: true),
+//               titlesData: FlTitlesData(
+//                 leftTitles: AxisTitles(
+//                   sideTitles: SideTitles(showTitles: true),
+//                 ),
+//                 bottomTitles: AxisTitles(
+//                   sideTitles: SideTitles(
+//                     showTitles: true,
+//                     getTitlesWidget: (value, meta) {
+//                       final index = value.toInt();
+//                       if (index < latestData.length) {
+//                         final rawTime = latestData[index]['time'];
+//                         try {
+//                           final parsedTime =
+//                               DateFormat.Hms().parse(rawTime); // HH:mm:ss
+//                           final label = DateFormat.Hm().format(parsedTime); // HH:mm
+//                           return Text(label, style: TextStyle(fontSize: 10));
+//                         } catch (_) {
+//                           return Text('');
+//                         }
+//                       }
+//                       return Text('');
+//                     },
+//                     interval: 1,
+//                   ),
+//                 ),
+//                 topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+//                 rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+//               ),
+//               borderData: FlBorderData(show: true),
+//               lineBarsData: [
+//                 LineChartBarData(
+//                   isCurved: true,
+//                   color: Colors.green,
+//                   barWidth: 2,
+//                   dotData: FlDotData(show: true),
+//                   belowBarData: BarAreaData(show: true, color: Colors.green.withOpacity(0.2)),
+//                   spots: List.generate(
+//                     latestData.length,
+//                     (index) {
+//                       final kelembapan = latestData[index]['humidity'] ?? 0;
+//                       return FlSpot(index.toDouble(), kelembapan.toDouble());
+//                     },
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
+// }

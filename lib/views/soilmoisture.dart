@@ -83,7 +83,7 @@ class _SoilMoisturePageState extends State<SoilMoisturePage> {
           'upper_limit': max,
         })
         .eq('parameter_id', 1)
-        .select(); // untuk melihat hasil update
+        .select();
 
     // print("Hasil update: $result");
 
@@ -101,14 +101,6 @@ class _SoilMoisturePageState extends State<SoilMoisturePage> {
         topic: 'tinovate/getLimit',
         message: '{"upper_limit": $max, "lower_limit": $min}',
       );
-      // mqttService.publishToMQTT(
-      //   topic: 'tinovate/getLimit',
-      //   message: jsonEncode({
-      //     'upper_limit': max,
-      //     'lower_limit': min,
-      //   }),
-      // );
-
       fetchData();
     }
   }

@@ -7,12 +7,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/mqtt_service.dart';
-// import 'package:intl/date_symbol_data_local.dart';
 
 class DashboardView extends StatefulWidget {
   DashboardView({super.key});
-  // final String datetime =
-  //     DateFormat('EEEE, d MMMM y', 'id_ID').format(DateTime.now());
 
   @override
   State<DashboardView> createState() => _DashboardViewState();
@@ -26,7 +23,7 @@ class _DashboardViewState extends State<DashboardView> {
   Weather? currentWeather;
   bool isIrrigationOn = false;
   bool isLoading = true;
-  bool isOn = false; // status tombol, default OFF
+  bool isOn = false;
   List<Map<String, dynamic>> latestSoilMoistureData = [];
   final DateTime now = DateTime.now();
   final String datetime =
@@ -36,8 +33,6 @@ class _DashboardViewState extends State<DashboardView> {
   String? fotoProfileUrl;
 
   Future<void> fetchIrrigationStatus() async {
-    // final supabase = Supabase.instance.client;
-
     final manualData = await supabase
         .from('data_kelembapan_tanah')
         .select('status')
@@ -62,7 +57,6 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Future<void> fetchDataKelembapan() async {
-    // final supabase = Supabase.instance.client;
     final response = await supabase
         .from('data_kelembapan_tanah')
         .select()
@@ -79,12 +73,11 @@ class _DashboardViewState extends State<DashboardView> {
     setState(() {
       fetchDataKelembapan();
       fetchIrrigationStatus();
+      getWeather();
     });
   }
 
   Future<void> toggleManualIrrigation() async {
-    // final supabase = Supabase.instance.client;
-
     if (isManualIrrigationOn == null) {
       print('Status manual irrigation belum diinisialisasi.');
       return;
@@ -239,61 +232,84 @@ class _DashboardViewState extends State<DashboardView> {
                     SizedBox(
                       height: 10,
                     ),
-                    SizedBox(
-                      height: 230,
-                      child: LineChart(
-                        LineChartData(
-                          gridData: FlGridData(show: true),
-                          titlesData: FlTitlesData(
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: (value, meta) {
-                                    final index = value.toInt();
-                                    if (index < latestSoilMoistureData.length) {
-                                      final rawTime =
-                                          latestSoilMoistureData[index]['time'];
-                                      final parsedTime = DateFormat.Hms().parse(
-                                          rawTime); // parsing dari HH:mm:ss
-                                      final label = DateFormat.Hm().format(
-                                          parsedTime); // format jadi HH:mm
-                                      return Text(label,
-                                          style: TextStyle(fontSize: 10));
-                                    }
-                                    return Text('');
-                                  },
-                                  interval: 1,
+                    StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: Supabase.instance.client
+                          .from('data_kelembapan_tanah')
+                          .stream(primaryKey: ['id']).order('id',
+                              ascending: true),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        // final latestSoilMoistureData = snapshot.data!;
+                        final data = snapshot.data!;
+                        final latest = data.length > 15
+                            ? data.sublist(data.length - 15)
+                            : data;
+
+                        return SizedBox(
+                          height: 230,
+                          child: LineChart(
+                            LineChartData(
+                              gridData: FlGridData(show: true),
+                              titlesData: FlTitlesData(
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
+                                ),
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    getTitlesWidget: (value, meta) {
+                                      final index = value.toInt();
+                                      if (index < latest.length) {
+                                        final rawTime = latest[index]['time'];
+                                        try {
+                                          final parsedTime = DateFormat.Hms()
+                                              .parse(rawTime); // HH:mm:ss
+                                          final label = DateFormat.Hm()
+                                              .format(parsedTime); // HH:mm
+                                          return Text(label,
+                                              style: TextStyle(fontSize: 10));
+                                        } catch (_) {
+                                          return Text('');
+                                        }
+                                      }
+                                      return Text('');
+                                    },
+                                    interval: 1,
+                                  ),
+                                ),
+                                topTitles: AxisTitles(
+                                  sideTitles: SideTitles(showTitles: false),
                                 ),
                               ),
-                              topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false))),
-                          borderData: FlBorderData(show: true),
-                          lineBarsData: [
-                            LineChartBarData(
-                              isCurved: true,
-                              color: Colors.green,
-                              barWidth: 2,
-                              dotData: FlDotData(show: true),
-                              belowBarData: BarAreaData(show: false),
-                              spots: List.generate(
-                                latestSoilMoistureData.length,
-                                (index) {
-                                  final kelembapan =
-                                      latestSoilMoistureData[index]
-                                              ['humidity'] ??
-                                          0;
-                                  return FlSpot(
-                                      index.toDouble(), kelembapan.toDouble());
-                                },
-                              ),
+                              borderData: FlBorderData(show: true),
+                              lineBarsData: [
+                                LineChartBarData(
+                                  isCurved: true,
+                                  color: Colors.green,
+                                  barWidth: 2,
+                                  dotData: FlDotData(show: true),
+                                  belowBarData: BarAreaData(show: false),
+                                  spots: List.generate(
+                                    latest.length,
+                                    (index) {
+                                      final kelembapan =
+                                          latest[index]['humidity'] ?? 0;
+                                      return FlSpot(index.toDouble(),
+                                          kelembapan.toDouble());
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     ),
+
                     SizedBox(
                       height: 10,
                     ),
